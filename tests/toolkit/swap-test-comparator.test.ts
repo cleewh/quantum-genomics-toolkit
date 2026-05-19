@@ -274,7 +274,7 @@ describe('SwapTestComparator', () => {
       expect(circuit.qasm).toContain('h q[0];');
     });
 
-    it('should measure only the ancilla qubit', () => {
+    it('should measure all qubits (SV1 requires it)', () => {
       const executor = createSwapTestExecutor(1.0);
       const comparator = new SwapTestComparator(executor);
       const scheme = getDefaultEncodingScheme('DNA');
@@ -284,7 +284,7 @@ describe('SwapTestComparator', () => {
 
       const circuit = comparator.buildSwapTestCircuit(seqA, seqB, scheme);
 
-      expect(circuit.qasm).toContain('c = measure q[0];');
+      expect(circuit.qasm).toContain('c = measure q;');
     });
   });
 

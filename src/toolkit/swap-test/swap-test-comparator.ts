@@ -214,7 +214,7 @@ export class SwapTestComparator {
 
     // Register declarations
     lines.push(`qubit[${qubitCount}] q;`);
-    lines.push(`bit[1] c;`);
+    lines.push(`bit[${qubitCount}] c;`);
     lines.push('');
 
     // Step 1: H gate on ancilla (qubit 0)
@@ -296,9 +296,9 @@ export class SwapTestComparator {
     gateCount++;
     lines.push('');
 
-    // Step 6: Measure ancilla only
-    lines.push('// Step 6: Measure ancilla');
-    lines.push('c = measure q[0];');
+    // Step 6: Measure all qubits (SV1 requires all qubits measured; we use ancilla bit for similarity)
+    lines.push('// Step 6: Measure all qubits');
+    lines.push('c = measure q;');
 
     const qasm = lines.join('\n');
 

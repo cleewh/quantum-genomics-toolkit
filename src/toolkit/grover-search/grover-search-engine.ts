@@ -306,7 +306,7 @@ export class GroverSearchEngine {
 
     // Register declarations
     lines.push(`qubit[${qubitCount}] q;`);
-    lines.push(`bit[${indexQubits}] c;`);
+    lines.push(`bit[${qubitCount}] c;`);
     lines.push('');
 
     // Step 1: Encode the sequence on the first 2N qubits

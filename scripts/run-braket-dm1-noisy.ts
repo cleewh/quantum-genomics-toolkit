@@ -22,10 +22,11 @@ import { EncodingEngine } from '../src/encoding/encoding-engine.js';
 import { ResultProcessor } from '../src/results/result-processor.js';
 import { DEFAULT_DNA_ENCODING_SCHEME } from '../src/types/encoding-schemes.js';
 import type { ParsedSequence, MeasurementResult, ExecutionMetadata } from '../src/types/index.js';
+import { ensureBraketBucket, resolveRegion } from './aws-helpers.js';
 
 // ─── Configuration ───────────────────────────────────────────────────────────
 
-const REGION = 'us-east-1';
+const REGION = resolveRegion();
 const DEVICE_ARN = 'arn:aws:braket:::device/quantum-simulator/amazon/dm1';
 const SHOTS = 1000;
 
@@ -34,7 +35,6 @@ const SHOTS = 1000;
 const HDV_SEQUENCE = 'GGCCGGCA';
 const HDV_DESCRIPTION = 'Hepatitis D virus ribozyme fragment (8 bases, noisy simulation)';
 
-const S3_BUCKET = 'amazon-braket-results-us-east-1-687677765589';
 const S3_PREFIX = `quantum-genomics-dm1/${Date.now()}`;
 
 // ─── Main ────────────────────────────────────────────────────────────────────
@@ -100,6 +100,7 @@ async function main() {
 
   // 3. Submit to DM1
   console.log('[3/4] Submitting to Amazon Braket DM1...');
+  const S3_BUCKET = await ensureBraketBucket(REGION);
   const braket = new BraketClient({ region: REGION });
 
   let taskArn: string;

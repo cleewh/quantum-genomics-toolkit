@@ -19,10 +19,10 @@ import { NoiseBenchmarker } from '../src/toolkit/noise-benchmarker/noise-benchma
 import { GenomeAnalyzer } from '../src/toolkit/genome-analyzer/genome-analyzer.js';
 import { CircuitTranspiler } from '../src/transpiler/circuit-transpiler.js';
 import { EXTENDED_BACKENDS } from '../src/toolkit/types.js';
+import { ensureBraketBucket, resolveRegion } from './aws-helpers.js';
 
-const REGION = 'us-east-1';
+const REGION = resolveRegion();
 const DEVICE_ARN = 'arn:aws:braket:::device/quantum-simulator/amazon/sv1';
-const S3_BUCKET = `amazon-braket-results-${REGION}-687677765589`;
 const SHOTS = 1000;
 
 // ─── SV1 Executor ────────────────────────────────────────────────────────────
@@ -30,10 +30,12 @@ const SHOTS = 1000;
 class SV1Executor {
   private braket: BraketClient;
   private s3: S3Client;
+  private bucket: string;
 
-  constructor() {
+  constructor(bucket: string) {
     this.braket = new BraketClient({ region: REGION });
     this.s3 = new S3Client({ region: REGION });
+    this.bucket = bucket;
   }
 
   async execute(circuit: TranspiledCircuit, shots: number): Promise<MeasurementResult> {
@@ -53,7 +55,7 @@ class SV1Executor {
       new CreateQuantumTaskCommand({
         deviceArn: DEVICE_ARN,
         shots,
-        outputS3Bucket: S3_BUCKET,
+        outputS3Bucket: this.bucket,
         outputS3KeyPrefix: prefix,
         action: JSON.stringify({
           braketSchemaHeader: { name: 'braket.ir.openqasm.program', version: '1' },
@@ -80,7 +82,7 @@ class SV1Executor {
     const resultsKey = `${taskDetails.outputS3KeyPrefix}/${taskArn.split('/').pop()}/results.json`;
 
     try {
-      const s3Response = await this.s3.send(new GetObjectCommand({ Bucket: S3_BUCKET, Key: resultsKey }));
+      const s3Response = await this.s3.send(new GetObjectCommand({ Bucket: this.bucket, Key: resultsKey }));
       const body = await s3Response.Body!.transformToString();
       const braketResult = JSON.parse(body);
 
@@ -119,7 +121,8 @@ async function main() {
   console.log('╚══════════════════════════════════════════════════════════════╝');
   console.log();
 
-  const sv1Executor = new SV1Executor();
+  const bucket = await ensureBraketBucket(REGION);
+  const sv1Executor = new SV1Executor(bucket);
 
   // ─── TEST 1: Encode ────────────────────────────────────────────────────────
   console.log('━━━ TEST 1: Encode (17-base Hep D fragment) ━━━');

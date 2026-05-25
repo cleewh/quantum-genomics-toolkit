@@ -1,6 +1,8 @@
 /**
  * Test encoding in two different AWS regions (us-east-1 and us-west-2).
  * Submits the same Hepatitis D fragment to SV1 in both regions.
+ *
+ * Resolves account ID at runtime via STS — no hardcoded account.
  */
 
 import {
@@ -8,43 +10,23 @@ import {
   CreateQuantumTaskCommand,
   GetQuantumTaskCommand,
 } from '@aws-sdk/client-braket';
-import { S3Client, CreateBucketCommand, HeadBucketCommand } from '@aws-sdk/client-s3';
 
 import { EncodingEngine } from '../src/encoding/encoding-engine.js';
 import { ResultProcessor } from '../src/results/result-processor.js';
 import { DEFAULT_DNA_ENCODING_SCHEME } from '../src/types/encoding-schemes.js';
 import type { ParsedSequence } from '../src/types/index.js';
+import { ensureBraketBucket } from './aws-helpers.js';
 
 const SEQUENCE = 'GGCCGGCA';
 const SHOTS = 100;
-const ACCOUNT_ID = '687677765589';
 
 const REGIONS = ['us-east-1', 'us-west-2'];
-
-async function ensureBucket(region: string): Promise<string> {
-  const bucketName = `amazon-braket-results-${region}-${ACCOUNT_ID}`;
-  const s3 = new S3Client({ region });
-  try {
-    await s3.send(new HeadBucketCommand({ Bucket: bucketName }));
-  } catch {
-    try {
-      await s3.send(new CreateBucketCommand({
-        Bucket: bucketName,
-        ...(region !== 'us-east-1' ? { CreateBucketConfiguration: { LocationConstraint: region } } : {}),
-      }));
-      console.log(`  Created bucket: ${bucketName}`);
-    } catch (e: any) {
-      if (!e.message?.includes('already own')) throw e;
-    }
-  }
-  return bucketName;
-}
 
 async function runInRegion(region: string): Promise<void> {
   console.log(`\n━━━ Region: ${region} ━━━`);
 
-  // Ensure S3 bucket exists
-  const bucket = await ensureBucket(region);
+  // Ensure S3 bucket exists (creates if needed; uses caller's account ID)
+  const bucket = await ensureBraketBucket(region);
 
   // Encode
   const encoder = new EncodingEngine();

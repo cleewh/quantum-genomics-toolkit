@@ -25,14 +25,15 @@ import type { ParsedSequence, MeasurementResult, ExecutionMetadata } from '../sr
 
 // ─── Configuration ───────────────────────────────────────────────────────────
 
-const REGION = 'us-east-1';
+import { ensureBraketBucket, resolveRegion } from './aws-helpers.js';
+
+const REGION = resolveRegion();
 const DEVICE_ARN = 'arn:aws:braket:::device/quantum-simulator/amazon/sv1';
 const SHOTS = 1000;
 const SEQUENCE = 'ACGT';
 
-// S3 bucket for results — Braket requires an S3 location for output
-// We'll create a temporary prefix in the default braket bucket
-const S3_BUCKET = `amazon-braket-results-${REGION}-687677765589`;
+// S3 bucket for results — Braket requires an S3 location for output.
+// The bucket is created on first run if it doesn't exist.
 const S3_PREFIX = `quantum-genomics-demo/${Date.now()}`;
 
 // ─── Main ────────────────────────────────────────────────────────────────────
@@ -70,6 +71,7 @@ async function main() {
 
   // 3. Submit to Braket
   console.log(`[3/5] Submitting to Amazon Braket SV1 (${REGION}, ${SHOTS} shots)...`);
+  const S3_BUCKET = await ensureBraketBucket(REGION);
   const braket = new BraketClient({ region: REGION });
 
   let taskArn: string;
